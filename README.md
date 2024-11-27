@@ -45,14 +45,22 @@
 
 ## 主要文件说明
 所有需要用到的主文件均位于根目录下，一般情况不需要运行非
+
 fold_train: 用于训练五折
+
 fold_val: 用于对五折文件进行验证
+
 fold_test: 用于对五折文件进行测试
+
 train: 单次训练，会将训练集所有数据用于训练
+
 val: 单次验证
+
 test: 单次测试
+
 batch_tasks: 批量执行任务，可以设置需要执行的指令和检测空闲GPU
-query_requirements: 批量生成所有依赖库
+
+query_requirements:批量生成所有依赖库
 
 ## 安装依赖
 ```bash
