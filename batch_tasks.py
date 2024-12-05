@@ -81,14 +81,8 @@ def terminate_processes(processes):
 def main():
     # 需要执行的训练命令列表（可以根据需求修改）
     train_commands = [
-        "python train.py --sequence A40",
-        "python train.py --sequence A70",
-        "python train.py --sequence AD",
-        "python train.py --sequence AZ",
-        "python train.py --sequence V40",
-        "python train.py --sequence V70",
         "python train.py --sequence VD",
-        "python train.py --sequence VD",
+        "python train.py --sequence VZ",
     ]
 
     # 指定你希望检查的 GPU ID 列表

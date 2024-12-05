@@ -76,7 +76,7 @@ if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # config = load_config("configs/task003_rxafusion.yaml")
     # sequence = "AD"
-    config = load_config("configs/task003_rxafusion.yaml")
+    config = load_config("configs/task003_rxafusion_cal.yaml")
     sequence = "V40"
     save_dir = config.get("save_dir", "./checkpoints/" + config['task_name'])
     best_metric_name = config.get("best_metric_name", "accuracy")

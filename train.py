@@ -176,7 +176,7 @@ def train(config, args):
 
             # 检查当前的验证指标是否超过历史最佳
             current_metric_value = val_metrics.get(best_metric_name, None)
-            if current_metric_value is not None and current_metric_value > best_metric_value:
+            if current_metric_value is not None and current_metric_value >= best_metric_value:
                 best_metric_value = current_metric_value
                 best_model_path = os.path.join(save_dir,
                                                f"best_{config['model'].split('.')[-1]}_{config['sequence']}_{best_metric_name}.pth")
@@ -184,17 +184,25 @@ def train(config, args):
                 print(
                     f"New best model saved at {best_model_path} with {best_metric_name}: {best_metric_value:.4f}")
 
-        # 更新学习率
-        if scheduler:
-            scheduler.step()
+            # 更新学习率
+            if scheduler:
+                scheduler.step(val_metrics['loss'])
 
         # 每隔 `save_frequency` 个 epoch 保存一次模型
         if (epoch + 1) % save_frequency == 0:
-            timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())
             save_path = os.path.join(save_dir,
                                      f"best_{config['model'].split('.')[-1]}_{config['sequence']}_epoch{epoch + 1}.pth")
             torch.save(model.state_dict(), save_path)
             print(f"Model checkpoint saved at {save_path}")
+
+        if current_lr <  config['early_stop']['learn_rate']:
+            print("Low Learning Rate, early stop at", epoch)
+            break
+
+    if config['save_last_model']:
+        save_path = os.path.join(save_dir, f"last_save_{config['model'].split('.')[-1]}_{config['sequence']}.pth")
+        torch.save(model.state_dict(), save_path)
+        print(f"Model checkpoint saved at {save_path}")
 
     # 关闭 TensorBoard 写入
     if writer:

@@ -23,11 +23,11 @@ from torch.nn import Conv3d
 class GenomicsEncoder(nn.Module):
     def __init__(self):
         super(GenomicsEncoder, self).__init__()
-        self.fc1 = nn.Linear(3832, 1024)  # 组学数据有100个特征
-        self.fc2 = nn.Linear(1024, 768)
+        self.fc1 = nn.Linear(20, 20)  # 组学数据有100个特征
+        self.fc2 = nn.Linear(20, 20)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
+        x = F.leaky_relu(self.fc1(x))
         x = self.fc2(x)
         return x
 
@@ -40,8 +40,8 @@ class Classifier(nn.Module):
         self.fc3 = nn.Linear(256, num_classes)  # 最后一层是分类层
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = F.leaky_relu(self.fc1(x))
+        x = F.leaky_relu(self.fc2(x))
         x = self.fc3(x)
         return x
 
@@ -137,10 +137,16 @@ class JointEmbeddingModelWithCrossAttentionTransformer(nn.Module):
         self.num_features = 768
         self.M = 32
         self.cam = GradCAM(model=self, target_layers=[self.image_encoder.stage4[-2].norm1], reshape_transform=reshape_transform)
-        self.image_fc = nn.Linear(24576, 25)
+        self.image_fc = nn.Sequential(
+            nn.Linear(24576, 4096),
+            nn.LeakyReLU(),
+            nn.Linear(4096, 256),
+            nn.LeakyReLU(),
+            nn.Linear(256, 20),
+        )
         self.genomics_encoder = GenomicsEncoder()
-        self.cross_attention = CrossAttentionWithTransformer(query_dim=25, key_value_dim=25)
-        self.classifier = Classifier(input_dim=50, num_classes=num_classes)
+        self.cross_attention = CrossAttentionWithTransformer(query_dim=20, key_value_dim=20)
+        self.classifier = Classifier(input_dim=40, num_classes=num_classes)
         self.attentions = Conv3d(in_channels=self.num_features, out_channels=self.M, kernel_size=1)
         self.bap = BAP(pool='GAP')
 
@@ -154,8 +160,8 @@ class JointEmbeddingModelWithCrossAttentionTransformer(nn.Module):
         # print(feature_matrix.shape, feature_matrix_hat.shape)
         self.image_embedding = self.image_fc(feature_matrix * 100)
         self.fake_image_embedding = self.image_fc(feature_matrix_hat * 100)
-        # genomics_embedding = self.genomics_encoder(genomics)
-        self.genomics_embedding = genomics
+        self.genomics_embedding  = self.genomics_encoder(genomics)
+        # self.genomics_embedding = genomics
 
         # grayscale_cam = self.cam(input_tensor=inputs, targets=None)  # 输出形状 [B, D, H, W]
         # rand_cam = self.cam(input_tensor=torch.zeros_like(inputs), targets=None)  # 输出形状 [B, D, H, W]

@@ -19,6 +19,7 @@
 import os
 
 import torch
+from torchinfo import summary
 
 from utils.config_loader import load_config
 from utils.instance_loader import get_instance, get_metric_function
@@ -29,7 +30,7 @@ def test(config, model_file, device, sequence, fold):
     val_transform = get_instance(config['preprocessing']['val_transform'])
 
     # 应用预处理并创建数据集, 加载数据集和数据加载器
-    test_dataset = get_instance(config['dataset'], config['val_dataset_dir'], transform=train_transform, set_type="test", device=device, sequence=sequence, fold=fold)
+    test_dataset = get_instance(config['dataset'], config['train_dataset_dir'], transform=val_transform, set_type="test", device=device, sequence=sequence, fold=fold)
 
     test_loader = get_instance(config['dataloader'], test_dataset, batch_size=config['batch_size']).get_loader()
 
@@ -40,7 +41,8 @@ def test(config, model_file, device, sequence, fold):
 
     print("Model Name:", config['model'].split('.')[-1])
     print("Model File:", model_file)
-
+    print("Model Info:")
+    print(summary(model))
     # 最终模型评估
     all_test_metric_results = []
     if "evaluation" in config:
@@ -53,7 +55,7 @@ def test(config, model_file, device, sequence, fold):
 
     return [all_test_metric_results]
 
-def fold_Test(device, save_dir, config, sequence, best_metric_name):
+def Test(device, save_dir, config, sequence, best_metric_name):
     test_avg = {}
 
     # 调用验证函数
@@ -71,9 +73,9 @@ def fold_Test(device, save_dir, config, sequence, best_metric_name):
 
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    config = load_config("configs/task003_rxafusion.yaml")
-    sequence = "VD"
+    config = load_config("configs/task003_rxafusion_cal.yaml")
+    sequence = "V40"
     save_dir = config.get("save_dir", "./checkpoints/" + config['task_name'])
     best_metric_name = config.get("best_metric_name", "accuracy")
-    fold_Test(device, save_dir, config, sequence, best_metric_name)
+    Test(device, save_dir, config, sequence, best_metric_name)
     # val(config,'checkpoints/task002/Vit_best_model_auc_score.pth', device, sequence)

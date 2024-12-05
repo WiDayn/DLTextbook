@@ -18,7 +18,6 @@ from torch.utils.tensorboard import SummaryWriter  # 导入 TensorBoard
 
 from utils.setup_seed import setup_seed
 from fold_val import val
-from modules.validation import validate
 from utils.config_loader import load_config
 from utils.instance_loader import get_instance, get_metric_function
 import time
@@ -217,7 +216,7 @@ if __name__ == "__main__":
     if args.config:
         config = load_config(args.config)
     else:
-        config = load_config("configs/task006_bjbl.yaml")
+        config = load_config("configs/task003_rxafusion_cal.yaml")
     seed = config.get('seed', -1)
     setup_seed(seed)
     fold_train(config, args)

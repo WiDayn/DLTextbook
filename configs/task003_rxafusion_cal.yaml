@@ -18,7 +18,7 @@ validation_frequency: 1
 
 train_dataset_dir: "datasets/raw/rxa"
 val_dataset_dir: "datasets/raw/rxa_test"
-test_dataset_dir: "datasets/raw/rxa_test"
+test_dataset_dir: "datasets/raw/rxa_inner_test"
 
 #model: "models.task002_resnet3D.ResNet3D"               # 模型路径
 model: "models.task003_vit_fusion_cal.FusionModel"
@@ -33,11 +33,17 @@ optimizer:                                           # 优化器配置
   params:                                            # 优化器参数
     lr: 0.0001
 
-#scheduler:                                           # 学习率衰减策略配置
-#  type: "torch.optim.lr_scheduler.StepLR"            # 学习率衰减策略路径
-#  params:                                            # 学习率衰减策略参数
-#    step_size: 50
-#    gamma: 0.1
+save_last_model: true
+early_stop:
+  learn_rate: 0.000002
+
+
+scheduler:                                           # 学习率衰减策略配置
+  type: "torch.optim.lr_scheduler.ReduceLROnPlateau"            # 学习率衰减策略路径
+  params:                                            # 学习率衰减策略参数
+    mode: 'min'
+    patience: 5
+    factor: 0.5
 
 # 数据预处理配置
 preprocessing:
@@ -46,7 +52,7 @@ preprocessing:
 
 # 验证指标配置
 validation:
-  function: "modules.validation_cal.validate"
+  function: "modules.validation.validation_cal.validate"
   metrics:
       - "modules.metrics.accuracy.accuracy"
       - "modules.metrics.f1_score.f1_score"
@@ -56,7 +62,7 @@ validation:
 
 # 评估函数
 evaluation:
-  function: "modules.evaluation.final_evaluate"  # 评估函数路径
+  function: "modules.evaluation.evaluation_cal.final_evaluate"  # 评估函数路径
   evaluation_metrics:
     - "modules.metrics.accuracy.accuracy"
     - "modules.metrics.f1_score.f1_score"
