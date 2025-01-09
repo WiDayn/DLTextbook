@@ -125,7 +125,7 @@ def train(config, args):
 
     # 加载模型、损失函数、优化器和学习率衰减策略
     model = get_instance(config['model']).to(device)
-    model = model.apply(InitWeights_He(1e-2))
+    # model = model.apply(InitWeights_He(1e-2))
     criterion = get_instance(config['loss_function']).to(device)
     optimizer = get_instance(config['optimizer']['type'], model.parameters(), **config['optimizer']['params'])
 
@@ -195,7 +195,7 @@ def train(config, args):
             torch.save(model.state_dict(), save_path)
             print(f"Model checkpoint saved at {save_path}")
 
-        if current_lr <  config['early_stop']['learn_rate']:
+        if 'early_stop' in config and current_lr <  config['early_stop']['learn_rate']:
             print("Low Learning Rate, early stop at", epoch)
             break
 
@@ -213,6 +213,7 @@ if __name__ == "__main__":
     if args.config:
         config = load_config(args.config)
     else:
+        # config = load_config("configs/task002_rxa.yaml")
         config = load_config("configs/task003_rxafusion_cal.yaml")
     seed = config.get('seed', -1)
     setup_seed(seed)

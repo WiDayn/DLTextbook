@@ -81,12 +81,20 @@ def terminate_processes(processes):
 def main():
     # 需要执行的训练命令列表（可以根据需求修改）
     train_commands = [
+        "python train.py --sequence A40",
+        "python train.py --sequence A70",
+        "python train.py --sequence AD",
+        "python train.py --sequence AZ",
+        "python train.py --sequence V40",
+        "python train.py --sequence V70",
         "python train.py --sequence VD",
         "python train.py --sequence VZ",
     ]
 
+    start_time = time.time()
+
     # 指定你希望检查的 GPU ID 列表
-    gpu_ids_to_check = [0, 1]  # 假设你要检查 GPU 0 和 GPU 1
+    gpu_ids_to_check = [1, 2, 3]  # 假设你要检查 GPU 0 和 GPU 1
 
     # 持续循环直到所有训练命令执行完毕
     processes = []  # 用于保存所有的子进程
@@ -105,7 +113,7 @@ def main():
             processes.append(process)  # 保存子进程
 
             # 等待短暂的时间，避免过快地进行下一个任务
-            time.sleep(60)
+            time.sleep(30)
 
         # 等待所有任务执行完毕
         for process in processes:
@@ -121,6 +129,7 @@ def main():
     finally:
         # 确保无论如何都清理子进程
         terminate_processes(processes)
+        print("Spend time", time.time() - start_time)
 
 
 if __name__ == "__main__":

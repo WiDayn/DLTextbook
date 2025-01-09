@@ -11,31 +11,41 @@ save_frequency: 10000 # 每 n 个 epoch 保存一次模型
 save_dir: "./checkpoints/task002"  # 模型保存路径
 best_metric_name: "auc_score"
 
-sequence: "V40"
+sequence: "V70"
 batch_size: 32
-epochs: 1000
+epochs: 200
 validation_frequency: 1
 
 train_dataset_dir: "datasets/raw/rxa"
-val_dataset_dir: "datasets/raw/rxa"
+val_dataset_dir: "datasets/raw/rxa_internal_test"
+test_dataset_dir: "datasets/raw/rxa_external_test"
 
 #model: "models.task002_resnet3D.ResNet3D"               # 模型路径
-model: "models.task002_vit.Vit3D"
+#model: "models.unetr.UNET_R"
+#model: "models.vit.Vit3D"
+#model: "models.swin_trans.SwinTrans"
+#model: "models.unet.UNET"
+model: "models.resnet.RESNET34"
 #model: "models.task002_mamba.FullResMamba"
 dataset: "datasets.task002_dataset.Task002Dataset"       # 数据集路径
 dataloader: "data.dataloaders.base_dataloader.BaseDataLoader"  # 数据加载器路径
 
 loss_function: "torch.nn.CrossEntropyLoss"           # 损失函数路径
 optimizer:                                           # 优化器配置
-  type: "torch.optim.Adam"                           # 优化器路径
+  type: "torch.optim.AdamW"                           # 优化器路径
   params:                                            # 优化器参数
     lr: 0.0001
 
-#scheduler:                                           # 学习率衰减策略配置
-#  type: "torch.optim.lr_scheduler.StepLR"            # 学习率衰减策略路径
-#  params:                                            # 学习率衰减策略参数
-#    step_size: 50
-#    gamma: 0.1
+save_last_model: true
+early_stop:
+  learn_rate: 0.000002
+
+scheduler:                                           # 学习率衰减策略配置
+  type: "torch.optim.lr_scheduler.ReduceLROnPlateau"            # 学习率衰减策略路径
+  params:                                            # 学习率衰减策略参数
+    mode: 'min'
+    patience: 5
+    factor: 0.5
 
 # 数据预处理配置
 preprocessing:
@@ -43,16 +53,18 @@ preprocessing:
   val_transform: "data.transforms.val_transform.val_transform"      # 验证集数据预处理
 
 # 验证指标配置
-metrics:
-    - "modules.metrics.accuracy.accuracy"
-    - "modules.metrics.f1_score.f1_score"
-    - "modules.metrics.precision_recall.precision"
-    - "modules.metrics.precision_recall.recall"
-    - "modules.metrics.auc.auc_score"
+validation:
+  function: "modules.validation.validation.validate"
+  metrics:
+      - "modules.metrics.accuracy.accuracy"
+      - "modules.metrics.f1_score.f1_score"
+      - "modules.metrics.precision_recall.precision"
+      - "modules.metrics.precision_recall.recall"
+      - "modules.metrics.auc.auc_score"
 
 # 评估函数
 evaluation:
-  function: "modules.evaluation.final_evaluate"  # 评估函数路径
+  function: "modules.evaluation.evaluation.final_evaluate"  # 评估函数路径
   evaluation_metrics:
     - "modules.metrics.accuracy.accuracy"
     - "modules.metrics.f1_score.f1_score"
@@ -60,4 +72,4 @@ evaluation:
     - "modules.metrics.precision_recall.recall"
     - "modules.metrics.auc.auc_score"
   save_visuals: true  # 是否保存可视化文件（如 ROC 曲线）
-  visuals_dir: "./visuals/task002"  # 可视化文件保存路径
+  visuals_dir: "./visuals/task003"  # 可视化文件保存路径

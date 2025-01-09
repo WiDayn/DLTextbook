@@ -10,8 +10,27 @@
 # 算法/数据来源(论文/代码):
 # 修改历史:
 # 使用示例:
+from unittest.mock import patch
+
+from monai.networks.nets import ViT
+from torch import nn
+
 from modules.VisionTransformer import VisionTransformer
 
+
+class Vit(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.model = ViT(
+        in_channels=1,
+        img_size=(64, 64, 64),
+        patch_size=(16, 16, 16),
+        classification=True,
+    )
+
+    def forward(self, x):
+        x, hidden_states_out = self.model(x)
+        return x
 
 
 def Vit3D():

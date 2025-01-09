@@ -13,6 +13,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from monai.networks.nets.swin_unetr import SwinTransformer, PatchMergingV2
+from monai.utils import ensure_tuple_rep, look_up_option
+from torchvision.models.swin_transformer import PatchMerging
 
 from modules.CrossAttentionWithTransformer import CrossAttentionWithTransformer
 from modules.VisionTransformer import VisionTransformer
@@ -38,19 +41,16 @@ class Classifier(nn.Module):
         self.fc1 = nn.Linear(input_dim, 512)
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, num_classes)  # 最后一层是分类层
-        self.last_feature = []
 
-    def forward(self, x, get_feature=False):
+    def forward(self, x):
         x = F.leaky_relu(self.fc1(x))
         x = F.leaky_relu(self.fc2(x))
-        if get_feature:
-            return x
         x = self.fc3(x)
         return x
 
 def reshape_transform(tensor, d=4, w=4, h=4):
     # 去掉cls token
-    result = tensor[:, 1:, :].reshape(tensor.size(0),
+    result = tensor[:, :, :].reshape(tensor.size(0),
     d, w, h, tensor.size(2))
 
     # 将通道维度放到第一个位置
@@ -128,24 +128,33 @@ class BAP(nn.Module):
 class JointEmbeddingModelWithCrossAttentionTransformer(nn.Module):
     def __init__(self, num_classes):
         super(JointEmbeddingModelWithCrossAttentionTransformer, self).__init__()
+        spatial_dims = 3
         self.genomics_embedding = []
         self.image_embedding = []
-        self.image_encoder = VisionTransformer(img_size=64,
-                              patch_size=16,
-                              embed_dim=768,
-                              depth=12,
-                              num_heads=12,
-                              in_c=1,
-                              num_classes=0)
+        self.image_encoder = SwinTransformer(
+            in_chans=1,
+            embed_dim=48,
+            window_size=ensure_tuple_rep(7, spatial_dims),
+            patch_size=ensure_tuple_rep(2, spatial_dims),
+            depths= (2, 2, 2, 2),
+            num_heads=(3, 6, 12, 24),
+            mlp_ratio=4.0,
+            qkv_bias=True,
+            drop_rate=0.0,
+            attn_drop_rate=0.0,
+            drop_path_rate=0.0,
+            norm_layer=nn.LayerNorm,
+            use_checkpoint=False,
+            use_v2=False,
+        )
+        checkpoint = torch.load("./models/pretrain/monai_swin.pt")
+        swinvit_keys = [key for key in checkpoint.keys() if key.startswith('swinViT')]
+        swinvit_weights = {key.replace('swinViT.', ''): checkpoint[key] for key in swinvit_keys}
+        self.image_encoder.load_state_dict(swinvit_weights)
         self.num_features = 768
         self.M = 32
-        self.cam = GradCAM(model=self, target_layers=[self.image_encoder.stage4[-2].norm1], reshape_transform=reshape_transform)
         self.image_fc = nn.Sequential(
-            nn.Linear(24576, 4096),
-            nn.LeakyReLU(),
-            nn.Linear(4096, 256),
-            nn.LeakyReLU(),
-            nn.Linear(256, 20),
+            nn.Linear(24576, 20),
         )
         self.genomics_encoder = GenomicsEncoder()
         self.cross_attention = CrossAttentionWithTransformer(query_dim=20, key_value_dim=20)
@@ -153,11 +162,11 @@ class JointEmbeddingModelWithCrossAttentionTransformer(nn.Module):
         self.attentions = Conv3d(in_channels=self.num_features, out_channels=self.M, kernel_size=1)
         self.bap = BAP(pool='GAP')
 
-    def forward(self, inputs, save_for_grad_cam=False, export_feature=True):
+    def forward(self, inputs, save_for_grad_cam=False):
         # image, genomics = inputs[0], inputs[1]
         image, genomics = inputs[:, 0, :, :, :].unsqueeze(1), inputs[:, 1:26, 0, 0, 0]
-        image_feature = self.image_encoder(image, save_for_grad_cam, return_feature_maps=True) # torch.Size([32, 65, 768])
-        reshape_feature = reshape_transform(image_feature[-1]) # [32, 768, 4, 4, 4]
+        image_feature = self.image_encoder(image) # torch.Size([32, 65, 768])
+        reshape_feature = image_feature[-1] # [32, 768, 4, 4, 4]
         attention_maps = self.attentions(reshape_feature) # torch.Size([32, 32, 4, 4, 4])
         feature_matrix, feature_matrix_hat = self.bap(reshape_feature, attention_maps) # torch.Size([32, 24576]) torch.Size([32, 24576])
         # print(feature_matrix.shape, feature_matrix_hat.shape)
@@ -165,9 +174,6 @@ class JointEmbeddingModelWithCrossAttentionTransformer(nn.Module):
         self.fake_image_embedding = self.image_fc(feature_matrix_hat * 100)
         self.genomics_embedding  = self.genomics_encoder(genomics)
         # self.genomics_embedding = genomics
-
-        # grayscale_cam = self.cam(input_tensor=inputs, targets=None)  # 输出形状 [B, D, H, W]
-        # rand_cam = self.cam(input_tensor=torch.zeros_like(inputs), targets=None)  # 输出形状 [B, D, H, W]
 
         attention_output_1, attention_output_2 = self.cross_attention(
             self.image_embedding, self.genomics_embedding, self.genomics_embedding,
@@ -186,12 +192,9 @@ class JointEmbeddingModelWithCrossAttentionTransformer(nn.Module):
 
         combined_fake_embedding = torch.cat((fake_attention_output_1, fake_attention_output_2), dim=1)
 
-        if export_feature:
-            return self.classifier(combined_embedding)
-
         return [output, output - self.classifier(combined_fake_embedding)]
 
-def FusionModel():
+def FusionSwinModel():
     model = JointEmbeddingModelWithCrossAttentionTransformer(2)
     return model
 

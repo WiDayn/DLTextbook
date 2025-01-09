@@ -45,8 +45,8 @@ def final_evaluate(model, dataloader, metrics, save_visuals=False, visuals_dir=N
             all_outputs.append(outputs)
             all_targets.append(targets)
 
-    first_outputs = [x[0] for x in all_outputs]
-    all_outputs = torch.cat(first_outputs, dim=0)
+    # first_outputs = [x[0] for x in all_outputs]
+    all_outputs = torch.cat(all_outputs, dim=0)
     all_targets = torch.cat(all_targets)
 
     # 计算各个指标

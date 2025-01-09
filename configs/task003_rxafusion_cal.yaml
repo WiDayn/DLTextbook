@@ -17,11 +17,12 @@ epochs: 200
 validation_frequency: 1
 
 train_dataset_dir: "datasets/raw/rxa"
-val_dataset_dir: "datasets/raw/rxa_test"
-test_dataset_dir: "datasets/raw/rxa_inner_test"
+val_dataset_dir: "datasets/raw/rxa_internal_test"
+test_dataset_dir: "datasets/raw/rxa_external_test"
 
 #model: "models.task002_resnet3D.ResNet3D"               # 模型路径
 model: "models.task003_vit_fusion_cal.FusionModel"
+#model: "models.task003_vit_fusion_cal_swin.FusionSwinModel"
 #model: "models.task002_mamba.FullResMamba"
 dataset: "datasets.task003_dataset.Task003Dataset"       # 数据集路径
 dataloader: "data.dataloaders.base_dataloader.BaseDataLoader"  # 数据加载器路径
@@ -42,7 +43,7 @@ scheduler:                                           # 学习率衰减策略配�
   type: "torch.optim.lr_scheduler.ReduceLROnPlateau"            # 学习率衰减策略路径
   params:                                            # 学习率衰减策略参数
     mode: 'min'
-    patience: 5
+    patience: 10
     factor: 0.5
 
 # 数据预处理配置
@@ -63,6 +64,7 @@ validation:
 # 评估函数
 evaluation:
   function: "modules.evaluation.evaluation_cal.final_evaluate"  # 评估函数路径
+#  function: "modules.evaluation.evaluation_export_feature.final_evaluate"  # 评估函数路径
   evaluation_metrics:
     - "modules.metrics.accuracy.accuracy"
     - "modules.metrics.f1_score.f1_score"

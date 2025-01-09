@@ -24,13 +24,13 @@ from torchinfo import summary
 from utils.config_loader import load_config
 from utils.instance_loader import get_instance, get_metric_function
 
-def test(config, model_file, device, sequence, fold):
+def test(config, model_file, device, sequence, fold, dataset_config='test_dataset_dir'):
     # 加载数据预处理函数
     train_transform = get_instance(config['preprocessing']['train_transform'])
     val_transform = get_instance(config['preprocessing']['val_transform'])
 
     # 应用预处理并创建数据集, 加载数据集和数据加载器
-    test_dataset = get_instance(config['dataset'], config['train_dataset_dir'], transform=val_transform, set_type="test", device=device, sequence=sequence, fold=fold)
+    test_dataset = get_instance(config['dataset'], config[dataset_config], transform=val_transform, set_type="test", device=device, sequence=sequence, fold=fold)
 
     test_loader = get_instance(config['dataloader'], test_dataset, batch_size=config['batch_size']).get_loader()
 
@@ -42,7 +42,7 @@ def test(config, model_file, device, sequence, fold):
     print("Model Name:", config['model'].split('.')[-1])
     print("Model File:", model_file)
     print("Model Info:")
-    print(summary(model))
+    # print(summary(model))
     # 最终模型评估
     all_test_metric_results = []
     if "evaluation" in config:
@@ -55,13 +55,15 @@ def test(config, model_file, device, sequence, fold):
 
     return [all_test_metric_results]
 
-def Test(device, save_dir, config, sequence, best_metric_name):
+def Test(device, save_dir, config, sequence, best_metric_name, dataset_config='test_dataset_dir'):
     test_avg = {}
 
     # 调用验证函数
     model_path = os.path.join(save_dir,
                               f"best_{config['model'].split('.')[-1]}_{sequence}_{best_metric_name}.pth")
-    all_test_metric_results, = test(config, model_path, device, sequence, -1)  # 进行验证
+    model_path = os.path.join(save_dir,
+                              f"last_save_{config['model'].split('.')[-1]}_{sequence}.pth")
+    all_test_metric_results, = test(config, model_path, device, sequence, -1, dataset_config)  # 进行验证
     for result in all_test_metric_results:
         for metric_name, value in result.items():
             if metric_name not in test_avg:
@@ -69,13 +71,18 @@ def Test(device, save_dir, config, sequence, best_metric_name):
             test_avg[metric_name] += value
 
     print("Test Avg", test_avg)
+    print("Excel Format:")
+    for metric in test_avg.values():
+        print(round(metric, 4))
 
 
 if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     config = load_config("configs/task003_rxafusion_cal.yaml")
-    sequence = "V40"
+    # config = load_config("configs/task003_rxa.yaml")
+    sequence = "AZ"
     save_dir = config.get("save_dir", "./checkpoints/" + config['task_name'])
     best_metric_name = config.get("best_metric_name", "accuracy")
-    Test(device, save_dir, config, sequence, best_metric_name)
+    for dataset in ['train_dataset_dir', 'val_dataset_dir', 'test_dataset_dir']:
+        Test(device, save_dir, config, sequence, best_metric_name, dataset)
     # val(config,'checkpoints/task002/Vit_best_model_auc_score.pth', device, sequence)
